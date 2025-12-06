@@ -1,0 +1,251 @@
+/* stylelint-disable at-rule-no-unknown */
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+/* stylelint-enable at-rule-no-unknown */
+
+/* Premium Automotive Dashboard Styling */
+@layer base {
+  * {
+    @apply antialiased;
+  }
+  
+  body {
+    @apply overflow-x-hidden;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* Noise texture overlay */
+  body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.03;
+    z-index: 1;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  }
+
+  /* Tech grid pattern background */
+  body::after {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.02;
+    z-index: 1;
+    pointer-events: none;
+    background-image: 
+      linear-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59, 130, 246, 0.1) 1px, transparent 1px);
+    background-size: 50px 50px;
+    animation: gridMove 30s linear infinite;
+  }
+
+  @keyframes gridMove {
+    0% { transform: translate(0, 0); }
+    100% { transform: translate(50px, 50px); }
+  }
+}
+
+@layer components {
+  /* Premium glassmorphism card */
+  .glass-card {
+    @apply bg-gradient-to-br from-white/10 via-white/5 to-transparent backdrop-blur-2xl;
+    @apply border border-white/20 rounded-3xl shadow-2xl;
+    @apply relative overflow-hidden;
+    background-image: 
+      linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 20% 20%, rgba(96, 165, 250, 0.1) 0%, transparent 50%);
+  }
+
+  /* Glowing corner notch */
+  .glass-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.4) 0%, transparent 70%);
+    border-radius: 0 0 0 100%;
+    opacity: 0.8;
+    transition: all 0.4s ease;
+  }
+
+  .glass-card:hover::before {
+    width: 80px;
+    height: 80px;
+    opacity: 1;
+    box-shadow: 0 0 30px rgba(59, 130, 246, 0.6);
+  }
+
+  /* Glossy reflection */
+  .glass-card::after {
+    content: "";
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(
+      115deg,
+      transparent 40%,
+      rgba(255, 255, 255, 0.05) 45%,
+      rgba(255, 255, 255, 0.1) 50%,
+      rgba(255, 255, 255, 0.05) 55%,
+      transparent 60%
+    );
+    transform: translateX(-100%);
+    transition: transform 0.6s ease;
+  }
+
+  .glass-card:hover::after {
+    transform: translateX(100%);
+  }
+
+  /* Premium button styles */
+  .btn-premium {
+    @apply relative px-6 py-3 rounded-2xl font-bold text-sm;
+    @apply bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600;
+    @apply text-white shadow-lg overflow-hidden;
+    @apply transition-all duration-300;
+    box-shadow: 
+      0 4px 15px rgba(59, 130, 246, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+
+  .btn-premium:hover {
+    transform: translateY(-2px);
+    box-shadow: 
+      0 8px 25px rgba(59, 130, 246, 0.6),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+
+  .btn-premium::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: left 0.5s ease;
+  }
+
+  .btn-premium:hover::before {
+    left: 100%;
+  }
+
+  /* Neon glow text */
+  .neon-text {
+    text-shadow: 
+      0 0 10px currentColor,
+      0 0 20px currentColor,
+      0 0 30px currentColor;
+    animation: neonPulse 2s ease-in-out infinite;
+  }
+
+  @keyframes neonPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+  }
+
+  /* Metric card with glow */
+  .metric-card {
+    @apply glass-card p-6 transition-all duration-300;
+    transform-style: preserve-3d;
+  }
+
+  .metric-card:hover {
+    transform: translateY(-8px) rotateX(5deg) rotateY(-5deg) scale(1.02);
+    box-shadow: 
+      0 25px 50px -12px rgba(0, 0, 0, 0.5),
+      0 0 30px rgba(59, 130, 246, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  /* Animated scan line */
+  @keyframes scan {
+    0% { transform: translateY(-100%); }
+    100% { transform: translateY(100%); }
+  }
+
+  .scan-line {
+    position: absolute;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, 
+      transparent, 
+      rgba(59, 130, 246, 0.8), 
+      transparent
+    );
+    animation: scan 3s linear infinite;
+    pointer-events: none;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.5);
+    border-radius: 10px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #3b82f6, #8b5cf6);
+    border-radius: 10px;
+    border: 2px solid rgba(15, 23, 42, 0.5);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #60a5fa, #a78bfa);
+  }
+
+  /* Status indicator glow */
+  .status-normal {
+    color: #10b981;
+    text-shadow: 0 0 10px #10b981, 0 0 20px #10b981;
+  }
+
+  .status-warning {
+    color: #f59e0b;
+    text-shadow: 0 0 10px #f59e0b, 0 0 20px #f59e0b;
+  }
+
+  .status-critical {
+    color: #ef4444;
+    text-shadow: 0 0 10px #ef4444, 0 0 20px #ef4444;
+    animation: criticalPulse 1s ease-in-out infinite;
+  }
+
+  @keyframes criticalPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+
+  /* Loading shimmer effect */
+  @keyframes shimmer {
+    0% { background-position: -1000px 0; }
+    100% { background-position: 1000px 0; }
+  }
+
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.1) 50%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    background-size: 1000px 100%;
+    animation: shimmer 2s infinite;
+  }
+}
