@@ -1,0 +1,4 @@
+# Deployment Trigger
+
+This file exists to trigger Vercel deployments.
+Last updated: 2025-12-12 11:50 IST
