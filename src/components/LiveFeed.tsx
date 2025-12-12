@@ -1,6 +1,9 @@
 import { Camera, X, RefreshCw, Activity, Upload } from 'lucide-react';
 import { useState, useEffect, ChangeEvent, useRef } from "react";
 
+// Production API URL
+const API_URL = "https://automotive-service-station.onrender.com";
+
 // --- 1. API HELPER ---
 const analyzeImageFile = async (file: File, cameraId: number, serviceRecordId?: string, shouldUpload: boolean = false) => {
   const formData = new FormData();
@@ -12,7 +15,7 @@ const analyzeImageFile = async (file: File, cameraId: number, serviceRecordId?: 
     formData.append("service_record_id", serviceRecordId);
   }
 
-  const response = await fetch("http://127.0.0.1:8000/api/analyze-image", {
+  const response = await fetch(`${API_URL}/api/analyze-image`, {
     method: "POST",
     body: formData,
   });
@@ -283,7 +286,7 @@ export function LiveFeed({ showUpload = true, serviceRecordId, onAnalysisComplet
   useEffect(() => {
     const loadRpiCameras = async () => {
       try {
-        const response = await fetch('http://127.0.0.1:8000/api/rpi-cameras');
+        const response = await fetch(`${API_URL}/api/rpi-cameras`);
         if (response.ok) {
           const data = await response.json();
           if (data.cameras) {
@@ -362,7 +365,7 @@ export function LiveFeed({ showUpload = true, serviceRecordId, onAnalysisComplet
   const switchPiCamera = async (index: number) => {
     setActivePiCamera(index);
     try {
-      await fetch(`http://127.0.0.1:8000/api/set-active-camera/${index}`, { method: "POST" });
+      await fetch(`${API_URL}/api/set-active-camera/${index}`, { method: "POST" });
       setPiStatus(`Switching to Cam ${index}...`);
     } catch (err) { console.error(err); }
   };
@@ -384,7 +387,7 @@ export function LiveFeed({ showUpload = true, serviceRecordId, onAnalysisComplet
         const stations: Block[] = ['front', 'left', 'right', 'brake'];
         const feedPromises = stations.map(async (station) => {
           try {
-            const response = await fetch(`http://127.0.0.1:8000/api/station-feed/${station}`);
+            const response = await fetch(`${API_URL}/api/station-feed/${station}`);
             const data = await response.json();
             if (data.annotatedImage) {
               return { station, image: `data:image/jpeg;base64,${data.annotatedImage}`, timestamp: data.timestamp };
@@ -437,7 +440,7 @@ export function LiveFeed({ showUpload = true, serviceRecordId, onAnalysisComplet
         }
 
         // Also update legacy single feed for backward compatibility with main display
-        const response = await fetch("http://127.0.0.1:8000/api/latest-detection");
+        const response = await fetch(`${API_URL}/api/latest-detection`);
         const data = await response.json();
         if (data.annotatedImage) {
           setPiImage(`data:image/jpeg;base64,${data.annotatedImage}`);

@@ -57,7 +57,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    fetch('http://127.0.0.1:8000/api/health')
+    fetch('https://automotive-service-station.onrender.com/api/health')
       .then(() => setBackendStatus('Connected'))
       .catch(() => setBackendStatus('Offline'));
   }, []);
