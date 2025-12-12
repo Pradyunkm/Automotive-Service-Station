@@ -14,7 +14,11 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://yolo-vehicle-inspection-2024.vercel.app",  # Production frontend
+        "http://localhost:5173",  # Local development
+        "http://127.0.0.1:5173",  # Local development alternative
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
