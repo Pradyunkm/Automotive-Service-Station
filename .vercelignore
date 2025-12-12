@@ -1,0 +1,8 @@
+# Ignore backend Python files
+*.py
+requirements.txt
+best.pt
+brakes.pt
+render.yaml
+__pycache__/
+*.pyc
