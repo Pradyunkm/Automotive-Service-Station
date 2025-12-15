@@ -41,17 +41,22 @@ export default function App() {
 
   // --- LOGIC (UNCHANGED) ---
   const updateTotalCost = (updatedAnalysis = feedAnalysis) => {
-    const front = updatedAnalysis.front || { scratches: 0, dents: 0 };
-    const left = updatedAnalysis.left || { scratches: 0, dents: 0 };
-    const right = updatedAnalysis.right || { scratches: 0, dents: 0 };
-    const brake = updatedAnalysis.brake || { scratches: 0, dents: 0 };
+    const front = updatedAnalysis.front || { scratches: 0, dents: 0, cracks: 0 };
+    const left = updatedAnalysis.left || { scratches: 0, dents: 0, cracks: 0 };
+    const right = updatedAnalysis.right || { scratches: 0, dents: 0, cracks: 0 };
+    const brake = updatedAnalysis.brake || { scratches: 0, dents: 0, cracks: 0, brakeStatus: undefined };
 
-    const total =
-      (front.scratches ?? 0) * 300 + (front.dents ?? 0) * 500 +
-      (left.scratches ?? 0) * 300 + (left.dents ?? 0) * 500 +
-      (right.scratches ?? 0) * 300 + (right.dents ?? 0) * 500 +
-      (brake.scratches ?? 0) * 300 + (brake.dents ?? 0) * 500 +
-      (serviceRecord.brake_wear_rate ?? 0) * 20 + 500;
+    // Calculate defect costs (scratches: ₹300, dents: ₹500, cracks/marks: ₹200)
+    const defectCost =
+      (front.scratches ?? 0) * 300 + (front.dents ?? 0) * 500 + (front.cracks ?? 0) * 200 +
+      (left.scratches ?? 0) * 300 + (left.dents ?? 0) * 500 + (left.cracks ?? 0) * 200 +
+      (right.scratches ?? 0) * 300 + (right.dents ?? 0) * 500 + (right.cracks ?? 0) * 200;
+
+    // Add brake cost ONLY if brake status is "Bad"
+    const brakeCost = (brake.brakeStatus === "Bad") ? 1500 : 0;
+
+    // Total cost = defect costs + brake cost (NO fixed charges)
+    const total = defectCost + brakeCost;
 
     setServiceRecord(prev => ({ ...prev, total_cost: total }));
   };

@@ -101,14 +101,22 @@ async def analyze_image(
         
         if pil_img.mode == 'RGBA':
             pil_img = pil_img.convert('RGB')
+        
+        # SPEED OPTIMIZATION: Resize image to max 640px (YOLO optimal size)
+        max_size = 640
+        if max(pil_img.size) > max_size:
+            ratio = max_size / max(pil_img.size)
+            new_size = tuple(int(dim * ratio) for dim in pil_img.size)
+            pil_img = pil_img.resize(new_size, Image.LANCZOS)
             
         img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
 
+        # SPEED OPTIMIZATION: Optimized YOLO inference settings
         if camera_id == 3:
-            results = brake_model(img, conf=0.25, iou=0.25, agnostic_nms=True)
+            results = brake_model(img, conf=0.25, iou=0.25, agnostic_nms=True, half=True, verbose=False, max_det=50)
             names = brake_model.names
         else:
-            results = damage_model(img, conf=0.15, iou=0.25, agnostic_nms=True)
+            results = damage_model(img, conf=0.20, iou=0.25, agnostic_nms=True, half=True, verbose=False, max_det=50)
             names = damage_model.names
 
         scratch_count = 0
@@ -136,11 +144,12 @@ async def analyze_image(
 
         print(f"📈 Final counts: Scratches={scratch_count}, Dents={dent_count}, Marks/Cracks={crack_count}")
 
+        # SPEED OPTIMIZATION: Use JPEG quality=85 for faster encoding
         annotated = results[0].plot()
-        _, annotated_buffer = cv2.imencode(".jpg", annotated)
+        _, annotated_buffer = cv2.imencode(".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 85])
         annotated_b64 = base64.b64encode(annotated_buffer).decode("utf-8")
 
-        _, clean_buffer = cv2.imencode(".jpg", img)
+        _, clean_buffer = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 85])
         clean_b64 = base64.b64encode(clean_buffer).decode("utf-8")
 
         image_url = None
