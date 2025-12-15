@@ -102,21 +102,21 @@ async def analyze_image(
         if pil_img.mode == 'RGBA':
             pil_img = pil_img.convert('RGB')
         
-        # SPEED OPTIMIZATION: Resize image to max 640px (YOLO optimal size)
-        max_size = 640
+        # EXTREME SPEED OPTIMIZATION: Resize to 416px (YOLOv8 native size, even faster)
+        max_size = 416  # Smaller = faster processing
         if max(pil_img.size) > max_size:
             ratio = max_size / max(pil_img.size)
             new_size = tuple(int(dim * ratio) for dim in pil_img.size)
-            pil_img = pil_img.resize(new_size, Image.LANCZOS)
+            pil_img = pil_img.resize(new_size, Image.BILINEAR)  # BILINEAR faster than LANCZOS
             
         img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
 
-        # SPEED OPTIMIZATION: Optimized YOLO inference settings
+        # EXTREME SPEED OPTIMIZATION: Higher confidence, fewer detections
         if camera_id == 3:
-            results = brake_model(img, conf=0.25, iou=0.25, agnostic_nms=True, half=True, verbose=False, max_det=50)
+            results = brake_model(img, conf=0.30, iou=0.4, agnostic_nms=True, half=True, verbose=False, max_det=30)
             names = brake_model.names
         else:
-            results = damage_model(img, conf=0.20, iou=0.25, agnostic_nms=True, half=True, verbose=False, max_det=50)
+            results = damage_model(img, conf=0.30, iou=0.4, agnostic_nms=True, half=True, verbose=False, max_det=30)
             names = damage_model.names
 
         scratch_count = 0
@@ -144,12 +144,12 @@ async def analyze_image(
 
         print(f"📈 Final counts: Scratches={scratch_count}, Dents={dent_count}, Marks/Cracks={crack_count}")
 
-        # SPEED OPTIMIZATION: Use JPEG quality=85 for faster encoding
+        # EXTREME SPEED OPTIMIZATION: JPEG quality=75 for maximum speed
         annotated = results[0].plot()
-        _, annotated_buffer = cv2.imencode(".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 85])
+        _, annotated_buffer = cv2.imencode(".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 75])
         annotated_b64 = base64.b64encode(annotated_buffer).decode("utf-8")
 
-        _, clean_buffer = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 85])
+        _, clean_buffer = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 75])
         clean_b64 = base64.b64encode(clean_buffer).decode("utf-8")
 
         image_url = None
