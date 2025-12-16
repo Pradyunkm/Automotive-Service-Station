@@ -155,22 +155,7 @@ async def analyze_image(
         image_url = None
         annotated_image_url = None
         
-        if should_upload:
-            try:
-                clean_filename = f"clean_{uuid.uuid4()}.jpg"
-                annotated_filename = f"annotated_{uuid.uuid4()}.jpg"
-                
-                image_url = upload_image(clean_buffer.tobytes(), clean_filename)
-                print(f"✅ Clean Image uploaded to Supabase: {clean_filename}")
-                
-                annotated_image_url = upload_image(annotated_buffer.tobytes(), annotated_filename)
-                print(f"✅ Annotated Image uploaded to Supabase: {annotated_filename}")
-                
-            except Exception as e:
-                print(f"❌ Error uploading to Supabase: {e}")
-        else:
-            print(f"⏭️ Skipping Supabase upload (should_upload=False)")
-
+        # Prepare response FIRST for instant return
         response = {
             "annotatedImage": annotated_b64,
             "cleanImage": clean_b64,
@@ -185,32 +170,57 @@ async def analyze_image(
         if str(is_manual).lower() != "true":
             latest_detection_store = response
         
-        if service_record_id and should_upload:
-            update_sensor_data(
-                service_record_id=service_record_id,
-                scratches_count=scratch_count,
-                dents_count=dent_count,
-                crack_count=crack_count
-            )
+        # Do uploads in BACKGROUND (non-blocking) for instant response
+        if should_upload:
+            import threading
+            def upload_in_background():
+                try:
+                    clean_filename = f"clean_{uuid.uuid4()}.jpg"
+                    annotated_filename = f"annotated_{uuid.uuid4()}.jpg"
+                    
+                    img_url = upload_image(clean_buffer.tobytes(), clean_filename)
+                    print(f"✅ Clean Image uploaded to Supabase: {clean_filename}")
+                    
+                    ann_img_url = upload_image(annotated_buffer.tobytes(), annotated_filename)
+                    print(f"✅ Annotated Image uploaded to Supabase: {annotated_filename}")
+                    
+                    # Update database with URLs in background
+                    if service_record_id:
+                        update_sensor_data(
+                            service_record_id=service_record_id,
+                            scratches_count=scratch_count,
+                            dents_count=dent_count,
+                            crack_count=crack_count
+                        )
+                        
+                        try:
+                            sensor_data_dict = {
+                                "service_record_id": service_record_id,
+                                "timestamp": datetime.now().isoformat(),
+                                "camera_id": camera_id,
+                                "detection_results": {
+                                    "scratches_count": scratch_count,
+                                    "dents_count": dent_count,
+                                    "crack_count": crack_count
+                                },
+                                "image_url": img_url,
+                                "annotated_image_url": ann_img_url
+                            }
+                            sensor_filename = f"sensor_data_{service_record_id}_{uuid.uuid4()}.json"
+                            upload_sensor_data(sensor_data_dict, sensor_filename)
+                            print(f"✅ Sensor data exported: {sensor_filename}")
+                        except Exception as e:
+                            print(f"❌ Error exporting sensor data: {e}")
+                            
+                except Exception as e:
+                    print(f"❌ Error uploading to Supabase: {e}")
             
-            try:
-                sensor_data_dict = {
-                    "service_record_id": service_record_id,
-                    "timestamp": datetime.now().isoformat(),
-                    "camera_id": camera_id,
-                    "detection_results": {
-                        "scratches_count": scratch_count,
-                        "dents_count": dent_count,
-                        "crack_count": crack_count
-                    },
-                    "image_url": image_url,
-                    "annotated_image_url": annotated_image_url
-                }
-                sensor_filename = f"sensor_data_{service_record_id}_{uuid.uuid4()}.json"
-                upload_sensor_data(sensor_data_dict, sensor_filename)
-                print(f"✅ Sensor data exported: {sensor_filename}")
-            except Exception as e:
-                print(f"❌ Error exporting sensor data: {e}")
+            # Start background thread - don't wait for it!
+            upload_thread = threading.Thread(target=upload_in_background, daemon=True)
+            upload_thread.start()
+            print("🚀 Background upload started - returning results immediately!")
+        else:
+            print(f"⏭️ Skipping Supabase upload (should_upload=False)")
             
         return response
     except Exception as e:
