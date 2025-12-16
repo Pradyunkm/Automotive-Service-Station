@@ -102,21 +102,21 @@ async def analyze_image(
         if pil_img.mode == 'RGBA':
             pil_img = pil_img.convert('RGB')
         
-        # BALANCED OPTIMIZATION: Fast processing + High accuracy
-        max_size = 320  # Keep small for speed
+        # MAXIMUM QUALITY: Process at 640px for high-quality output
+        max_size = 640  # Larger = better quality output
         if max(pil_img.size) > max_size:
             ratio = max_size / max(pil_img.size)
             new_size = tuple(int(dim * ratio) for dim in pil_img.size)
-            pil_img = pil_img.resize(new_size, Image.BILINEAR)
+            pil_img = pil_img.resize(new_size, Image.LANCZOS)  # LANCZOS = best quality resize
             
         img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
 
-        # BALANCED: Lower confidence (catch ALL defects) + fast inference
+        # BALANCED: Good accuracy with quality processing
         if camera_id == 3:
-            results = brake_model(img, conf=0.25, iou=0.45, agnostic_nms=True, half=True, verbose=False, max_det=50, imgsz=320)
+            results = brake_model(img, conf=0.25, iou=0.45, agnostic_nms=True, half=True, verbose=False, max_det=50, imgsz=640)
             names = brake_model.names
         else:
-            results = damage_model(img, conf=0.25, iou=0.45, agnostic_nms=True, half=True, verbose=False, max_det=50, imgsz=320)
+            results = damage_model(img, conf=0.25, iou=0.45, agnostic_nms=True, half=True, verbose=False, max_det=50, imgsz=640)
             names = damage_model.names
 
         scratch_count = 0
@@ -144,12 +144,12 @@ async def analyze_image(
 
         print(f"📈 Final counts: Scratches={scratch_count}, Dents={dent_count}, Marks/Cracks={crack_count}")
 
-        # HIGH QUALITY OUTPUT: JPEG quality=85 for professional results
+        # MAXIMUM QUALITY OUTPUT: JPEG quality=95 (near-lossless)
         annotated = results[0].plot()
-        _, annotated_buffer = cv2.imencode(".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 85])
+        _, annotated_buffer = cv2.imencode(".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 95])
         annotated_b64 = base64.b64encode(annotated_buffer).decode("utf-8")
 
-        _, clean_buffer = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 85])
+        _, clean_buffer = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 95])
         clean_b64 = base64.b64encode(clean_buffer).decode("utf-8")
 
         image_url = None
