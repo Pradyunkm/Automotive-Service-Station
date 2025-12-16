@@ -144,12 +144,12 @@ async def analyze_image(
 
         print(f"📈 Final counts: Scratches={scratch_count}, Dents={dent_count}, Marks/Cracks={crack_count}")
 
-        # SPEED OPTIMIZATION: JPEG quality=50 for faster encoding
+        # HIGH QUALITY OUTPUT: JPEG quality=85 for professional results
         annotated = results[0].plot()
-        _, annotated_buffer = cv2.imencode(".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 50])
+        _, annotated_buffer = cv2.imencode(".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 85])
         annotated_b64 = base64.b64encode(annotated_buffer).decode("utf-8")
 
-        _, clean_buffer = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 50])
+        _, clean_buffer = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 85])
         clean_b64 = base64.b64encode(clean_buffer).decode("utf-8")
 
         image_url = None
