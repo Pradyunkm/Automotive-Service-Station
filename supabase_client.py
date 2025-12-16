@@ -12,8 +12,11 @@ from datetime import datetime
 # Load environment variables
 load_dotenv()
 
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+# Get Supabase credentials from environment variables with fallback
+SUPABASE_URL = os.getenv("SUPABASE_URL") or "https://aqeolcjdbkjxfoanfgsa.supabase.co"
+SUPABASE_KEY = os.getenv("SUPABASE_KEY") or "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFxZW9sY2pkYmtqeGZvYW5mZ3NhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI3MDUyMDQsImV4cCI6MjA3ODI4MTIwNH0.ZW6oo-SL4etQdlqSbgt-RTGg0BNsYAS6xiQPIgg5NDs"
+
+print(f"🔵 Initializing Supabase client with URL: {SUPABASE_URL}")
 
 # Initialize Supabase client
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
