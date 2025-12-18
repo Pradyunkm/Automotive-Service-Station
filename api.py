@@ -196,11 +196,6 @@ async def analyze_image(
                 if str(is_manual).lower() != "true":
                     global latest_detection_store
                     latest_detection_store = final_response
-
-                
-                if str(is_manual).lower() != "true":
-                    global latest_detection_store
-                    latest_detection_store = final_response
                 
                 # SAVE TO DATABASE: Only when should_upload=True
                 if should_upload:
