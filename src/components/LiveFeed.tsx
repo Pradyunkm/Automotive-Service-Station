@@ -545,6 +545,7 @@ export function LiveFeed({ showUpload = true, serviceRecordId, onAnalysisComplet
 
     try {
       const targetId = blockIds[block];
+      // Always save to database (works from any device/URL)
       const resData = await analyzeImageFile(file, targetId, serviceRecordId, true);
 
       const annotatedUrl = `data:image/jpeg;base64,${resData.annotatedImage}`;
@@ -700,7 +701,9 @@ export function LiveFeed({ showUpload = true, serviceRecordId, onAnalysisComplet
                   }`}
               >
                 <Camera className="w-3 h-3" />
-                {autoCapturing ? 'CAPTURING...' : 'AUTO CAPTURE'}
+                {autoCapturing
+                  ? `CAPTURING ${blocksList.indexOf(currentAutoStation!) + 1}/4...`
+                  : 'AUTO CAPTURE'}
               </button>
             )}
 
@@ -930,7 +933,7 @@ export function LiveFeed({ showUpload = true, serviceRecordId, onAnalysisComplet
                     )}
                   </div>
                   <div className="flex gap-2">
-                    {(state.beforeImage || state.afterImage) && (
+                    {(state.beforeImage || state.afterImage || state.loading) && (
                       <button onClick={() => resetBlock(block)} className="text-slate-400 hover:text-red-500 transition-colors flex items-center gap-1 text-xs font-bold">
                         <X className="w-4 h-4" /> CLEAR
                       </button>
@@ -1088,6 +1091,7 @@ export function LiveFeed({ showUpload = true, serviceRecordId, onAnalysisComplet
                               setBlocks(p => ({ ...p, [block]: { ...p[block], loading: true, beforeImage: beforeImageUrl } }));
                               try {
                                 const targetId = blockIds[block];
+                                // Always save to database (works from any device/URL)
                                 const res = await analyzeImageFile(file, targetId, serviceRecordId, true);
 
                                 if (!res.annotatedImage) {

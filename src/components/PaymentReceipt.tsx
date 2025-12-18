@@ -1,4 +1,4 @@
-import { FileText, Download, Share2, CreditCard, CheckCircle2, Clock, ImageIcon } from 'lucide-react';
+import { FileText, Download, Share2, CreditCard, CheckCircle2, Clock, ImageIcon, Trash2 } from 'lucide-react';
 import { ServiceRecord, Vehicle } from '../types';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
@@ -16,9 +16,10 @@ interface PaymentReceiptProps {
   serviceRecord: ServiceRecord;
   feedAnalysis: FeedAnalysis;
   onGenerateReceipt: () => void;
+  onClearAll?: () => void;
 }
 
-export function PaymentReceipt({ serviceRecord, feedAnalysis, onGenerateReceipt }: PaymentReceiptProps) {
+export function PaymentReceipt({ serviceRecord, feedAnalysis, onGenerateReceipt, onClearAll }: PaymentReceiptProps) {
   const [modalData, setModalData] = useState({
     isOpen: false,
     title: '',
@@ -78,18 +79,37 @@ export function PaymentReceipt({ serviceRecord, feedAnalysis, onGenerateReceipt 
             transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
             className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
           />
-          <div className="relative flex items-center gap-3">
-            <motion.div
-              whileHover={{ rotate: 360, scale: 1.2 }}
-              transition={{ duration: 0.5 }}
-              className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center"
-            >
-              <FileText className="w-6 h-6 text-white" />
-            </motion.div>
-            <div>
-              <h3 className="text-white font-bold text-xl tracking-tight">Payment & Receipt</h3>
-              <p className="text-white/80 text-sm">Service Invoice Details</p>
+          <div className="relative flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <motion.div
+                whileHover={{ rotate: 360, scale: 1.2 }}
+                transition={{ duration: 0.5 }}
+                className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center"
+              >
+                <FileText className="w-6 h-6 text-white" />
+              </motion.div>
+              <div>
+                <h3 className="text-white font-bold text-xl tracking-tight">Payment & Receipt</h3>
+                <p className="text-white/80 text-sm">Service Invoice Details</p>
+              </div>
             </div>
+
+            {/* Clear Button in Header */}
+            {onClearAll && (
+              <motion.button
+                onClick={() => {
+                  if (window.confirm('⚠️ Clear all inspection data? This will reset all images, defect counts, and costs. This action cannot be undone!')) {
+                    onClearAll();
+                  }
+                }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="px-4 py-2 rounded-xl bg-red-500/20 hover:bg-red-500/30 border-2 border-white hover:border-white text-white font-bold text-sm flex items-center gap-2 transition-all shadow-lg"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Clear All</span>
+              </motion.button>
+            )}
           </div>
         </motion.div>
 
@@ -399,12 +419,12 @@ export function PaymentReceipt({ serviceRecord, feedAnalysis, onGenerateReceipt 
           </motion.div>
 
           {/* Action Buttons */}
-          <div className="flex gap-4 mt-6">
+          <div className="flex flex-wrap gap-4 mt-6">
             <motion.button
               onClick={onGenerateReceipt}
               whileHover={{ scale: 1.05, y: -2 }}
               whileTap={{ scale: 0.95 }}
-              className="relative flex-1 flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 text-white rounded-xl font-bold shadow-2xl overflow-hidden group"
+              className="relative flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 text-white rounded-xl font-bold shadow-2xl overflow-hidden group"
             >
               <motion.div
                 animate={{ x: ['0%', '200%'] }}
@@ -452,6 +472,6 @@ export function PaymentReceipt({ serviceRecord, feedAnalysis, onGenerateReceipt 
         stats={modalData.stats}
         status={modalData.status}
       />
-    </motion.div>
+    </motion.div >
   );
 }

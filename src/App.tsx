@@ -7,6 +7,7 @@ import BatteryHealthChart from './components/BatteryHealthChart';
 import { Vehicle, ServiceRecord, ServiceHistory } from './types';
 import { Car, Activity, Cpu, Battery, Info, CreditCard, Wifi, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from 'framer-motion';
+import { API_CONFIG } from './config/api.config';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -62,7 +63,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    fetch('https://automotive-service-station.onrender.com/api/health')
+    fetch(`${API_CONFIG.baseURL}/api/health`)
       .then(() => setBackendStatus('Connected'))
       .catch(() => setBackendStatus('Offline'));
   }, []);
@@ -93,6 +94,26 @@ export default function App() {
   };
 
   const handleGenerateReceipt = async () => { alert("Receipt Generated! (Simulation)"); };
+
+  const handleClearAll = () => {
+    // Reset all feed analysis data
+    setFeedAnalysis({
+      front: { scratches: 0, dents: 0, cracks: 0, imageUrl: '', beforeImage: '', annotatedImage: '', annotatedImageUrl: '', brakeStatus: undefined },
+      left: { scratches: 0, dents: 0, cracks: 0, imageUrl: '', beforeImage: '', annotatedImage: '', annotatedImageUrl: '', brakeStatus: undefined },
+      right: { scratches: 0, dents: 0, cracks: 0, imageUrl: '', beforeImage: '', annotatedImage: '', annotatedImageUrl: '', brakeStatus: undefined },
+      brake: { scratches: 0, dents: 0, cracks: 0, imageUrl: '', beforeImage: '', annotatedImage: '', annotatedImageUrl: '', brakeStatus: undefined },
+    });
+
+    //  Reset service record costs
+    setServiceRecord(prev => ({
+      ...prev,
+      scratches_count: 0,
+      dents_count: 0,
+      total_cost: 0
+    }));
+
+    alert('✅ All inspection data cleared!');
+  };
 
   // --- RENDER UI (REDESIGNED) ---
   return (
@@ -581,7 +602,7 @@ export default function App() {
                   style={{ boxShadow: '0 0 10px rgba(250, 204, 21, 0.8)' }}
                 />
               </motion.div>
-              <PaymentReceipt vehicle={currentVehicle} serviceRecord={serviceRecord} feedAnalysis={feedAnalysis} onGenerateReceipt={handleGenerateReceipt} />
+              <PaymentReceipt vehicle={currentVehicle} serviceRecord={serviceRecord} feedAnalysis={feedAnalysis} onGenerateReceipt={handleGenerateReceipt} onClearAll={handleClearAll} />
             </motion.div>
           )}
         </AnimatePresence>

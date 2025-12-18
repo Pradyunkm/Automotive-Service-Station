@@ -66,6 +66,13 @@ try:
     damage_model = YOLO("best.pt") 
     brake_model = YOLO("brakes.pt") 
     print("✅ Models Loaded")
+    
+    # PRE-WARM MODELS: Eliminate first-request cold start
+    print("🔥 Pre-warming models...")
+    dummy_img = np.zeros((640, 640, 3), dtype=np.uint8)
+    damage_model(dummy_img, verbose=False)
+    brake_model(dummy_img, verbose=False)
+    print("✅ Models pre-warmed and ready!")
 except:
     damage_model = YOLO("yolov8n.pt")
     brake_model = damage_model
@@ -102,98 +109,120 @@ async def analyze_image(
         if pil_img.mode == 'RGBA':
             pil_img = pil_img.convert('RGB')
         
-        # MAXIMUM QUALITY: Process at 640px for high-quality output
-        max_size = 640  # Larger = better quality output
+        # OPTIMIZED: Resize to 640px max for faster processing
+        max_size = 640
         if max(pil_img.size) > max_size:
             ratio = max_size / max(pil_img.size)
             new_size = tuple(int(dim * ratio) for dim in pil_img.size)
-            pil_img = pil_img.resize(new_size, Image.LANCZOS)  # LANCZOS = best quality resize
+            pil_img = pil_img.resize(new_size, Image.LANCZOS)
             
         img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
-
-        # BALANCED: Good accuracy with quality processing
-        if camera_id == 3:
-            results = brake_model(img, conf=0.25, iou=0.45, agnostic_nms=True, half=True, verbose=False, max_det=50, imgsz=640)
-            names = brake_model.names
-        else:
-            results = damage_model(img, conf=0.25, iou=0.45, agnostic_nms=True, half=True, verbose=False, max_det=50, imgsz=640)
-            names = damage_model.names
-
-        scratch_count = 0
-        dent_count = 0
-        crack_count = 0
-
-        print(f"📊 Processing detections... (Total boxes: {len(results[0].boxes)})")
-        for result in results:
-            for box in result.boxes:
-                cls = int(box.cls.item())
-                label = names.get(cls, "").lower().strip()
-                conf = float(box.conf.item())
-                
-                if "good" in label: 
-                    continue 
-
-                if "scratch" in label: 
-                    scratch_count += 1
-                elif "dent" in label: 
-                    dent_count += 1
-                elif any(x in label for x in ["mark", "crack", "rust", "wear", "brake"]):
-                    crack_count += 1
-                else:
-                    crack_count += 1
-
-        print(f"📈 Final counts: Scratches={scratch_count}, Dents={dent_count}, Marks/Cracks={crack_count}")
-
-        # MAXIMUM QUALITY OUTPUT: JPEG quality=95 (near-lossless)
-        annotated = results[0].plot()
-        _, annotated_buffer = cv2.imencode(".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 95])
-        annotated_b64 = base64.b64encode(annotated_buffer).decode("utf-8")
-
-        _, clean_buffer = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 95])
-        clean_b64 = base64.b64encode(clean_buffer).decode("utf-8")
-
-        image_url = None
-        annotated_image_url = None
         
-        # Prepare response FIRST for instant return
+        # INSTANT PREVIEW: Return image immediately before YOLO runs
+        _, preview_buffer = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 80])
+        preview_b64 = base64.b64encode(preview_buffer).decode("utf-8")
+        clean_b64 = preview_b64  # Use same preview for clean image
+        
+        # Prepare instant response
         response = {
-            "annotatedImage": annotated_b64,
+            "annotatedImage": preview_b64,  # Preview shown immediately
             "cleanImage": clean_b64,
-            "imageUrl": image_url,
-            "annotatedImageUrl": annotated_image_url,
-            "scratchCount": scratch_count,
-            "dentCount": dent_count,
-            "crackCount": crack_count,
-            "timestamp": datetime.now().timestamp()
+            "imageUrl": None,
+            "annotatedImageUrl": None,
+            "scratchCount": 0,  # Will be updated in background
+            "dentCount": 0,
+            "crackCount": 0,
+            "timestamp": datetime.now().timestamp(),
+            "status": "processing"  # Indicates background processing
         }
         
-        if str(is_manual).lower() != "true":
-            latest_detection_store = response
-        
-        # Do uploads in BACKGROUND (non-blocking) for instant response
-        if should_upload:
-            import threading
-            def upload_in_background():
-                try:
-                    clean_filename = f"clean_{uuid.uuid4()}.jpg"
-                    annotated_filename = f"annotated_{uuid.uuid4()}.jpg"
-                    
-                    img_url = upload_image(clean_buffer.tobytes(), clean_filename)
-                    print(f"✅ Clean Image uploaded to Supabase: {clean_filename}")
-                    
-                    ann_img_url = upload_image(annotated_buffer.tobytes(), annotated_filename)
-                    print(f"✅ Annotated Image uploaded to Supabase: {annotated_filename}")
-                    
-                    # Update database with URLs in background
-                    if service_record_id:
-                        update_sensor_data(
-                            service_record_id=service_record_id,
-                            scratches_count=scratch_count,
-                            dents_count=dent_count,
-                            crack_count=crack_count
-                        )
+        # BACKGROUND YOLO PROCESSING: Don't block response
+        import threading
+        def process_yolo_background():
+            try:
+                print("🚀 Starting background YOLO inference...")
+                
+                # Run YOLO inference
+                if camera_id == 3:
+                    results = brake_model(img, conf=0.25, iou=0.45, agnostic_nms=True, half=True, verbose=False, max_det=50, imgsz=640)
+                    names = brake_model.names
+                else:
+                    results = damage_model(img, conf=0.25, iou=0.45, agnostic_nms=True, half=True, verbose=False, max_det=50, imgsz=640)
+                    names = damage_model.names
+                
+                # Count detections
+                scratch_count = 0
+                dent_count = 0
+                crack_count = 0
+                
+                for result in results:
+                    for box in result.boxes:
+                        cls = int(box.cls.item())
+                        label = names.get(cls, "").lower().strip()
                         
-                        try:
+                        if "good" in label:
+                            continue
+                        if "scratch" in label:
+                            scratch_count += 1
+                        elif "dent" in label:
+                            dent_count += 1
+                        elif any(x in label for x in ["mark", "crack", "rust", "wear", "brake"]):
+                            crack_count += 1
+                        else:
+                            crack_count += 1
+                
+                print(f"📈 YOLO Results: Scratches={scratch_count}, Dents={dent_count}, Marks={crack_count}")
+                
+                # Generate high-quality annotated image
+                annotated = results[0].plot()
+                _, annotated_buffer = cv2.imencode(".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 95])
+                annotated_b64 = base64.b64encode(annotated_buffer).decode("utf-8")
+                
+                _, clean_buffer = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 95])
+                
+                # Update latest detection store
+                final_response = {
+                    "annotatedImage": annotated_b64,
+                    "cleanImage": clean_b64,
+                    "imageUrl": None,
+                    "annotatedImageUrl": None,
+                    "scratchCount": scratch_count,
+                    "dentCount": dent_count,
+                    "crackCount": crack_count,
+                    "timestamp": datetime.now().timestamp(),
+                    "status": "complete"
+                }
+                
+                if str(is_manual).lower() != "true":
+                    global latest_detection_store
+                    latest_detection_store = final_response
+
+                
+                if str(is_manual).lower() != "true":
+                    global latest_detection_store
+                    latest_detection_store = final_response
+                
+                # SAVE TO DATABASE: Only when should_upload=True
+                if should_upload:
+                    print(f"💾 Uploading to Supabase in background...")
+                    try:
+                        clean_filename = f"clean_{uuid.uuid4()}.jpg"
+                        annotated_filename = f"annotated_{uuid.uuid4()}.jpg"
+                        
+                        img_url = upload_image(clean_buffer.tobytes(), clean_filename)
+                        print(f"✅ Clean Image uploaded: {clean_filename}")
+                        
+                        ann_img_url = upload_image(annotated_buffer.tobytes(), annotated_filename)
+                        print(f"✅ Annotated Image uploaded: {annotated_filename}")
+                        
+                        if service_record_id:
+                            update_sensor_data(
+                                service_record_id=service_record_id,
+                                scratches_count=scratch_count,
+                                dents_count=dent_count,
+                                crack_count=crack_count
+                            )
+                            
                             sensor_data_dict = {
                                 "service_record_id": service_record_id,
                                 "timestamp": datetime.now().isoformat(),
@@ -209,19 +238,16 @@ async def analyze_image(
                             sensor_filename = f"sensor_data_{service_record_id}_{uuid.uuid4()}.json"
                             upload_sensor_data(sensor_data_dict, sensor_filename)
                             print(f"✅ Sensor data exported: {sensor_filename}")
-                        except Exception as e:
-                            print(f"❌ Error exporting sensor data: {e}")
-                            
-                except Exception as e:
-                    print(f"❌ Error uploading to Supabase: {e}")
-            
-            # Start background thread - don't wait for it!
-            upload_thread = threading.Thread(target=upload_in_background, daemon=True)
-            upload_thread.start()
-            print("🚀 Background upload started - returning results immediately!")
-        else:
-            print(f"⏭️ Skipping Supabase upload (should_upload=False)")
-            
+                    except Exception as e:
+                        print(f"❌ Error uploading to Supabase: {e}")
+            except Exception as e:
+                print(f"❌ Background YOLO error: {e}")
+        
+        # Start background thread - don't wait!
+        yolo_thread = threading.Thread(target=process_yolo_background, daemon=True)
+        yolo_thread.start()
+        print("⚡ Instant preview returned - YOLO processing in background!")
+        
         return response
     except Exception as e:
         print(f"Error: {e}")
@@ -287,6 +313,40 @@ async def update_sensors(
         return {"success": success}
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+@app.post("/api/save-sensor-data")
+async def save_sensor_data(
+    service_record_id: str = Form(...),
+    battery_level: float = Form(None),
+    drivable_range_km: float = Form(None),
+    vibration_level: str = Form(None),
+    brake_wear_rate: float = Form(None),
+    brake_lifetime_days: int = Form(None),
+    rpm: int = Form(None),
+    voltage: float = Form(None)
+):
+    """Manually save sensor data to database (called from ECU Diagnostics page)"""
+    print(f"💾 MANUAL SENSOR SAVE: service_record_id={service_record_id}")
+    try:
+        success = update_sensor_data(
+            service_record_id=service_record_id,
+            battery_level=battery_level,
+            drivable_range_km=drivable_range_km,
+            vibration_level=vibration_level,
+            brake_wear_rate=brake_wear_rate,
+            brake_lifetime_days=brake_lifetime_days,
+            rpm=rpm,
+            voltage=voltage
+        )
+        if success:
+            print(f"✅ Sensor data saved successfully for record {service_record_id}")
+        else:
+            print(f"❌ Failed to save sensor data")
+        return {"success": success}
+    except Exception as e:
+        print(f"❌ Error saving sensor data: {e}")
+        return {"success": False, "error": str(e)}
+
 
 # MULTI-CAMERA RPI FEED ENDPOINTS
 @app.post("/api/update/{station}")
