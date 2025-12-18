@@ -163,23 +163,33 @@ def upload_image(file_bytes: bytes, file_name: str, bucket_name: str = "images")
     """Upload an image to Supabase Storage and return its public URL"""
     try:
         print(f"🔵 Attempting to upload image: {file_name} to bucket: {bucket_name}")
-        # Upload file
-        response = supabase.storage.from_(bucket_name).upload(
-            path=file_name,
-            file=file_bytes,
-            file_options={"content-type": "image/jpeg"}
-        )
+        print(f"📏 File size: {len(file_bytes)} bytes")
+        print(f"🌐 Supabase URL: {SUPABASE_URL}")
         
-        print(f"✅ Upload response: {response}")
+        # Upload file
+        try:
+            response = supabase.storage.from_(bucket_name).upload(
+                path=file_name,
+                file=file_bytes,
+                file_options={"content-type": "image/jpeg", "upsert": "true"}
+            )
+            print(f"✅ Upload response: {response}")
+        except Exception as upload_error:
+            print(f"❌ Upload exception: {type(upload_error).__name__}: {upload_error}")
+            import traceback
+            traceback.print_exc()
+            return None
         
         # Get public URL
         if response:
             url = get_public_url(file_name, bucket_name)
             print(f"✅ Image uploaded successfully! URL: {url}")
             return url
-        return None
+        else:
+            print(f"❌ Upload failed: No response from Supabase")
+            return None
     except Exception as e:
-        print(f"❌ Error uploading image: {e}")
+        print(f"❌ Error uploading image: {type(e).__name__}: {e}")
         import traceback
         traceback.print_exc()
         return None
